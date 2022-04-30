@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	conditions := MinimumConditions{}
 	var attested *AttestedSignature
 	var err error
 
@@ -27,7 +28,7 @@ func main() {
 	}
 	log.Println("Signature matched and attestation passed: ", attestation)
 
-	if err = verifyConditions(*attestation); err != nil {
+	if err = conditions.verify(*attestation); err != nil {
 		log.Fatalf("failed to verify the conditions: %v", err)
 	}
 
