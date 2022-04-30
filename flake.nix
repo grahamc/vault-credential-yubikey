@@ -25,6 +25,8 @@
 
           buildInputs = with pkgs; [
             go
+            pkg-config
+            pcsclite
           ];
         });
     };
