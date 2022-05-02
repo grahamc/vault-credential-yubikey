@@ -1,4 +1,4 @@
-package main
+package yubikey
 
 import (
 	"crypto"
@@ -10,7 +10,9 @@ import (
 	"strings"
 )
 
-func attestAndSign(challenge []byte) (*AttestedSignature, error) {
+func AttestAndSign(challenge []byte) (*AttestedSignature, error) {
+	slot := piv.SlotCardAuthentication
+
 	cards, err := piv.Cards()
 	if err != nil {
 		return nil, fmt.Errorf("Error listing cards: %v", err)
@@ -20,11 +22,11 @@ func attestAndSign(challenge []byte) (*AttestedSignature, error) {
 	var yk *piv.YubiKey
 	for _, card := range cards {
 		log.Println("found card: ", card)
-		if strings.Contains(strings.ToLower(card), "yubico yubikey otp+fido+ccid 01 00") {
-			log.Println("We like this card, opening.")
+		lower := strings.ToLower(card)
+		if strings.Contains(lower, "yubico") && strings.Contains(lower, "ccid") {
+			log.Println("Card appears to be from Yubico with CCID support.")
 			if yk, err = piv.Open(card); err != nil {
-				return nil, fmt.Errorf("Error opening card: %v", err)
-				// ...
+				log.Printf("Error opening card: %v", err)
 			}
 		}
 	}
@@ -38,13 +40,26 @@ func attestAndSign(challenge []byte) (*AttestedSignature, error) {
 		return nil, fmt.Errorf("Failed to fetch the attestation cert: %v", err)
 	}
 
+	// {
+	// 	if _, err = yk.PrivateKey(slot); err != nil {
+	// 		log.Println("Failed to fetch the cert from the slot we're attesting: %v.", err)
+	// 		log.Println("Generating an EC256 key in the slot, with TouchPolicyNever / PINPolicyNever, and the default management key.")
+	// 		keyParams := piv.Key{
+	// 			Algorithm:   piv.AlgorithmEC256,
+	// 			TouchPolicy: piv.TouchPolicyNever,
+	// 			PINPolicy:   piv.PINPolicyNever,
+	// 		}
+	// 		yk.GenerateKey(piv.DefaultManagementKey, slot, keyParams)
+	// 	}
+	// }
+
 	var attestedSlotCert *x509.Certificate
-	if attestedSlotCert, err = yk.Attest(piv.SlotCardAuthentication); err != nil {
+	if attestedSlotCert, err = yk.Attest(slot); err != nil {
 		return nil, fmt.Errorf("Failed to generate an attestation: %v", err)
 	}
 
 	var pkey crypto.PrivateKey
-	if pkey, err = yk.PrivateKey(piv.SlotCardAuthentication, attestedSlotCert.PublicKey, piv.KeyAuth{}); err != nil {
+	if pkey, err = yk.PrivateKey(slot, attestedSlotCert.PublicKey, piv.KeyAuth{}); err != nil {
 		return nil, fmt.Errorf("Failed to get the private key handle: %v", err)
 	}
 

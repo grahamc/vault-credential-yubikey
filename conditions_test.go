@@ -1,4 +1,4 @@
-package main
+package yubikey
 
 import (
 	"github.com/go-piv/piv-go/piv"

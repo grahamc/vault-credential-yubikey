@@ -27,6 +27,7 @@
             go
             pkg-config
             pcsclite
+            jq
           ];
         });
     };
