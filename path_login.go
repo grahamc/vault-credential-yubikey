@@ -87,7 +87,7 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 		return logical.ErrorResponse("Error in minimum device conditions: %v", err), nil
 	}
 
-	_, ok := b.tokens[fmt.Sprint(attestation.Serial)]
+	_, ok := b.yubikeys[fmt.Sprint(attestation.Serial)]
 	if !ok {
 		return nil, logical.ErrPermissionDenied
 	}

@@ -13,7 +13,7 @@ import (
 type backend struct {
 	*framework.Backend
 
-	tokens     map[string]*string
+	yubikeys     map[string]*string
 	conditions MinimumConditions
 }
 
@@ -39,7 +39,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func newBackend() (*backend, error) {
 	b := &backend{
-		tokens: make(map[string]*string),
+		yubikeys: make(map[string]*string),
 	}
 
 	b.Backend = &framework.Backend{
@@ -52,8 +52,8 @@ func newBackend() (*backend, error) {
 		},
 		Paths: []*framework.Path{
 			b.pathLogin(),
-			b.pathTokensList(),
-			b.pathTokens(),
+			b.pathYubikeysList(),
+			b.pathYubikeys(),
 		},
 	}
 
@@ -62,5 +62,5 @@ func newBackend() (*backend, error) {
 
 const mockHelp = `
 The Mock backend is a dummy auth backend that stores serial data in
-memory and allows for Vault login and token renewal using these credentials.
+memory and allows for Vault login and yubikey renewal using these credentials.
 `
