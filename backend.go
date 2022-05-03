@@ -44,10 +44,12 @@ func newBackend() (*backend, error) {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				"challenge/*",
 			},
 		},
 		Paths: []*framework.Path{
 			b.pathLogin(),
+			b.pathChallenge(),
 			b.pathYubikeysList(),
 			b.pathYubikeys(),
 		},
