@@ -6,9 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -33,11 +35,9 @@ func (b *backend) pathLogin() *framework.Path {
 				Description: "The PEM-encoded Signing certificate.",
 			},
 		},
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.handleLogin,
-				Summary:  "Log in using an attestation",
-			},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.handleLogin,
 		},
 	}
 }
@@ -87,18 +87,42 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 		return logical.ErrorResponse("Error in minimum device conditions: %v", err), nil
 	}
 
-	_, ok := b.yubikeys[fmt.Sprint(attestation.Serial)]
-	if !ok {
-		return nil, logical.ErrPermissionDenied
+	serial := strings.ToLower(fmt.Sprint(attestation.Serial))
+
+	yubikey, err := b.yubikey(ctx, req.Storage, serial)
+	if yubikey == nil {
+		return logical.ErrorResponse("invalid serial or public key"), nil
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for a CIDR match.
+	if len(yubikey.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, yubikey.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
+	}
+
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"serial": serial,
+		},
+		DisplayName: serial,
+		Alias: &logical.Alias{
+			Name: serial,
+		},
+	}
+
+	yubikey.PopulateTokenAuth(auth)
 
 	// Compose the response
 	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Metadata: map[string]string{
-				"serial": fmt.Sprint(attestation.Serial),
-			},
-		},
+		Auth: auth,
 	}
 
 	return resp, nil

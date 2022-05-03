@@ -12,8 +12,6 @@ import (
 // backend wraps the backend framework and adds a map for storing key value pairs.
 type backend struct {
 	*framework.Backend
-
-	yubikeys     map[string]*string
 	conditions MinimumConditions
 }
 
@@ -38,9 +36,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func newBackend() (*backend, error) {
-	b := &backend{
-		yubikeys: make(map[string]*string),
-	}
+	b := &backend{}
 
 	b.Backend = &framework.Backend{
 		Help:        strings.TrimSpace(mockHelp),

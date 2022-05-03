@@ -96,6 +96,7 @@ github.com/hashicorp/vault/api
 ## explicit; go 1.16
 github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/certutil
+github.com/hashicorp/vault/sdk/helper/cidrutil
 github.com/hashicorp/vault/sdk/helper/compressutil
 github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/cryptoutil
