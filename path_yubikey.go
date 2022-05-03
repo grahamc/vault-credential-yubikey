@@ -2,6 +2,9 @@ package yubikey
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -12,6 +15,8 @@ import (
 
 type YubikeyEntry struct {
 	tokenutil.TokenParams
+
+	PublicKey string
 }
 
 func (b *backend) pathYubikeys() *framework.Path {
@@ -22,6 +27,10 @@ func (b *backend) pathYubikeys() *framework.Path {
 			"serial": {
 				Type:        framework.TypeString,
 				Description: "Specifies the yubikey's serial",
+			},
+			"public_key": {
+				Type:        framework.TypeString,
+				Description: "(Optional) Specifies the yubikey's public key. The public key should be EC256, encoded as a 'PUBLIC KEY' PEM, and then further base64 encoded.",
 			},
 		},
 
@@ -95,6 +104,7 @@ func (b *backend) handleYubikeyRead(ctx context.Context, req *logical.Request, d
 
 	data := map[string]interface{}{}
 	yubikey.PopulateTokenData(data)
+	data["public_key"] = yubikey.PublicKey
 
 	return &logical.Response{
 		Data: data,
@@ -114,6 +124,25 @@ func (b *backend) handleYubikeyWrite(ctx context.Context, req *logical.Request, 
 	// Due to existence check, yubikeyEntry will only be nil if it's a create operation
 	if yubikeyEntry == nil {
 		yubikeyEntry = &YubikeyEntry{}
+	}
+
+	public_key := d.Get("public_key").(string)
+	if public_key != "" {
+		var pemKey []byte
+		if pemKey, err = base64.StdEncoding.DecodeString(public_key); err != nil {
+			return logical.ErrorResponse("public_key does not base64decode: %v", err), nil
+		}
+
+		publicKeyBlock, _ := pem.Decode(pemKey)
+		if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
+			return logical.ErrorResponse("public_key: failed to decode PEM data"), nil
+		}
+
+		if _, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes); err != nil {
+			return logical.ErrorResponse("public_key: failed to parse PKIX Public Key"), nil
+		}
+
+		yubikeyEntry.PublicKey = string(pemKey)
 	}
 
 	if err := yubikeyEntry.ParseTokenFields(req, d); err != nil {

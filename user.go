@@ -27,6 +27,8 @@ func AttestAndSign(challenge []byte) (*AttestedSignature, error) {
 			log.Println("Card appears to be from Yubico with CCID support.")
 			if yk, err = piv.Open(card); err != nil {
 				log.Printf("Error opening card: %v", err)
+			} else {
+				break
 			}
 		}
 	}

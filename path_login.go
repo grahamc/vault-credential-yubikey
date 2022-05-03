@@ -2,6 +2,7 @@ package yubikey
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -93,6 +94,29 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 	if yubikey == nil {
 		return logical.ErrorResponse("invalid serial or public key"), nil
 	}
+
+	if yubikey.PublicKey != "" {
+		publicKeyBlock, _ := pem.Decode([]byte(yubikey.PublicKey))
+		if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
+			return logical.ErrorResponse("Internal error with public keys."), nil
+		}
+
+		publicKeyAny, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+		if err != nil {
+			return logical.ErrorResponse("Internal error parsing public keys via PKIX"), nil
+		}
+
+		publicKeyEcdsa, ok := publicKeyAny.(*ecdsa.PublicKey)
+		if !ok {
+			return logical.ErrorResponse("Internal error parsing public keys as ecdsa"), nil
+		}
+
+		providedPublicKey, ok := attestedSig.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
+		if !publicKeyEcdsa.Equal(providedPublicKey) {
+			return logical.ErrorResponse("Mismatched public key."), nil
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
