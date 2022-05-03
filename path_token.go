@@ -4,39 +4,41 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathTokens() []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern: "token/" + framework.GenericNameRegex("serial"),
+func (b *backend) pathTokens() *framework.Path {
+	p := &framework.Path{
+		Pattern: "token/" + framework.GenericNameRegex("serial"),
 
-			Fields: map[string]*framework.FieldSchema{
-				"serial": {
-					Type:        framework.TypeString,
-					Description: "Specifies the token's serial",
-				},
+		Fields: map[string]*framework.FieldSchema{
+			"serial": {
+				Type:        framework.TypeString,
+				Description: "Specifies the token's serial",
 			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleTokenWrite,
-					Summary:  "Updates a token to the auth method.",
-				},
-				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.handleTokenWrite,
-					Summary:  "Adds a new token on the auth method.",
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: b.handleTokenDelete,
-					Summary:  "Deletes a token from the auth method.",
-				},
-			},
-
-			ExistenceCheck: b.handleExistenceCheck,
 		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleTokenWrite,
+				Summary:  "Updates a token to the auth method.",
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.handleTokenWrite,
+				Summary:  "Adds a new token on the auth method.",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handleTokenDelete,
+				Summary:  "Deletes a token from the auth method.",
+			},
+		},
+
+		ExistenceCheck: b.handleExistenceCheck,
 	}
+
+	tokenutil.AddTokenFields(p.Fields)
+	return p
 }
 
 func (b *backend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {

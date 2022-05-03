@@ -50,13 +50,11 @@ func newBackend() (*backend, error) {
 				"login",
 			},
 		},
-		Paths: framework.PathAppend(
-			[]*framework.Path{
-				b.pathLogin(),
-				b.pathTokensList(),
-			},
+		Paths: []*framework.Path{
+			b.pathLogin(),
+			b.pathTokensList(),
 			b.pathTokens(),
-		),
+		},
 	}
 
 	return b, nil
