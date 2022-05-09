@@ -16,7 +16,7 @@ all: fmt build start
 
 build:
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/vault-plugin-auth-yubikey cmd/vault-plugin-auth-yubikey/main.go
-	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o attest cmd/attest/main.go
+	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o attest cmd/attest/*.go
 
 start:
 	vault server -log-level=trace -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins

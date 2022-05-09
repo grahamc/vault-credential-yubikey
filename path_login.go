@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"strings"
+	"math/big"
 
-	"github.com/go-piv/piv-go/piv"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,6 +19,10 @@ func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
+			"serial": {
+				Type:        framework.TypeString,
+				Description: "The serial number of the yubikey",
+			},
 			"challenge": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded challenge the server asked you to sign",
@@ -26,14 +30,6 @@ func (b *backend) pathLogin() *framework.Path {
 			"signature": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded, signed version of the challenge",
-			},
-			"attestation_certificate": {
-				Type:        framework.TypeString,
-				Description: "The PEM-encoded Attestatation certificate (The certificate contained in slot f9.)",
-			},
-			"signing_certificate": {
-				Type:        framework.TypeString,
-				Description: "The PEM-encoded Signing certificate.",
 			},
 		},
 
@@ -46,7 +42,7 @@ func (b *backend) pathLogin() *framework.Path {
 func parseCertParam(pem_data string) (*x509.Certificate, error) {
 	certBytes, _ := pem.Decode([]byte(pem_data))
 	if certBytes == nil {
-		return nil, fmt.Errorf("failed to decode PEM data")
+		return nil, fmt.Errorf("failed to decode PEM data %v", pem_data)
 	}
 
 	cert, err := x509.ParseCertificate(certBytes.Bytes)
@@ -59,64 +55,26 @@ func parseCertParam(pem_data string) (*x509.Certificate, error) {
 
 func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var attestedSig AttestedSignature
+	var signature []byte
+	var challenge []byte
 
-	attestedSig.AttestationCertificate, err = parseCertParam(data.Get("attestation_certificate").(string))
-	if err != nil {
-		return logical.ErrorResponse("Error in attestation_certificate: ", err), nil
+	serial, ok := data.Get("serial").(string)
+	if !ok {
+		return logical.ErrorResponse("Failed to get getting serial string"), nil
 	}
 
-	if attestedSig.SigningCertificate, err = parseCertParam(data.Get("signing_certificate").(string)); err != nil {
-		return logical.ErrorResponse("Error in signing_certificate: ", err), nil
-	}
-
-	if attestedSig.Signature, err = base64.StdEncoding.DecodeString(data.Get("signature").(string)); err != nil {
+	if signature, err = base64.StdEncoding.DecodeString(data.Get("signature").(string)); err != nil {
 		return logical.ErrorResponse("Error in signature: ", err), nil
 	}
 
-	var challenge []byte
 	if challenge, err = base64.StdEncoding.DecodeString(data.Get("challenge").(string)); err != nil {
 		return logical.ErrorResponse("Error in challenge: ", err), nil
 	}
-
-	var attestation *piv.Attestation
-	if attestation, err = verifyAttestation(challenge, attestedSig); err != nil {
-		return logical.ErrorResponse("Error in attestation validation: %v", err), nil
-	}
-
-	if err = b.conditions.verify(*attestation); err != nil {
-		return logical.ErrorResponse("Error in minimum device conditions: %v", err), nil
-	}
-
-	serial := strings.ToLower(fmt.Sprint(attestation.Serial))
 
 	yubikey, err := b.yubikey(ctx, req.Storage, serial)
 	if yubikey == nil {
 		return logical.ErrorResponse("invalid serial or public key"), nil
 	}
-
-	if yubikey.PublicKey != "" {
-		publicKeyBlock, _ := pem.Decode([]byte(yubikey.PublicKey))
-		if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
-			return logical.ErrorResponse("Internal error with public keys."), nil
-		}
-
-		publicKeyAny, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
-		if err != nil {
-			return logical.ErrorResponse("Internal error parsing public keys via PKIX"), nil
-		}
-
-		publicKeyEcdsa, ok := publicKeyAny.(*ecdsa.PublicKey)
-		if !ok {
-			return logical.ErrorResponse("Internal error parsing public keys as ecdsa"), nil
-		}
-
-		providedPublicKey, ok := attestedSig.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
-		if !publicKeyEcdsa.Equal(providedPublicKey) {
-			return logical.ErrorResponse("Mismatched public key."), nil
-		}
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +88,36 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, yubikey.TokenBoundCIDRs) {
 			return nil, logical.ErrPermissionDenied
 		}
+	}
+
+	if yubikey.PublicKey == "" {
+		b.Logger().Warn("token trying to authenticate but no public key is pinned")
+		return nil, logical.ErrPermissionDenied
+	}
+
+	publicKeyBlock, _ := pem.Decode([]byte(yubikey.PublicKey))
+	if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
+		return logical.ErrorResponse("Internal error with public keys."), nil
+	}
+
+	publicKeyAny, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+	if err != nil {
+		return logical.ErrorResponse("Internal error parsing public keys via PKIX"), nil
+	}
+
+	publicKeyEcdsa, ok := publicKeyAny.(*ecdsa.PublicKey)
+	if !ok {
+		return logical.ErrorResponse("Internal error parsing public keys as ecdsa"), nil
+	}
+
+	var sig struct {
+		R, S *big.Int
+	}
+	if _, err := asn1.Unmarshal(signature, &sig); err != nil {
+		return nil, fmt.Errorf("unmarshaling signature: %v", err)
+	}
+	if !ecdsa.Verify(publicKeyEcdsa, challenge, sig.R, sig.S) {
+		return nil, fmt.Errorf("signature didn't match")
 	}
 
 	auth := &logical.Auth{

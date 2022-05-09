@@ -6,36 +6,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/go-piv/piv-go/piv"
-	"log"
-	"strings"
 )
 
-func AttestAndSign(challenge []byte) (*AttestedSignature, error) {
+func AttestAndSign(yk piv.YubiKey, challenge []byte) (*AttestedSignature, error) {
 	slot := piv.SlotCardAuthentication
-
-	cards, err := piv.Cards()
-	if err != nil {
-		return nil, fmt.Errorf("Error listing cards: %v", err)
-	}
-
-	// Find a YubiKey and open the reader.
-	var yk *piv.YubiKey
-	for _, card := range cards {
-		log.Println("found card: ", card)
-		lower := strings.ToLower(card)
-		if strings.Contains(lower, "yubico") && strings.Contains(lower, "ccid") {
-			log.Println("Card appears to be from Yubico with CCID support.")
-			if yk, err = piv.Open(card); err != nil {
-				log.Printf("Error opening card: %v", err)
-			} else {
-				break
-			}
-		}
-	}
-
-	if yk == nil {
-		return nil, fmt.Errorf("No suitable Yubikey identified.")
-	}
+	var err error
 
 	var attestationCert *x509.Certificate
 	if attestationCert, err = yk.AttestationCertificate(); err != nil {

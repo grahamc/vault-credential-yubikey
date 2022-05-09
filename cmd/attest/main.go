@@ -2,24 +2,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
-	"os"
+	"strings"
 
-	yubikey "github.com/grahamc/vault-credential-yubikey"
+	"github.com/go-piv/piv-go/piv"
+	"github.com/hashicorp/vault/api"
 )
 
 type Message struct {
 	AttestationCertificate string `json:"attestation_certificate"`
 	SigningCertificate     string `json:"signing_certificate"`
-	Challenge              string `json:"challenge"`
-	Signature              string `json:"signature"`
 }
 
 func pemPubKey(pubkeyAny interface{}) (string, error) {
@@ -59,31 +56,43 @@ func pemCert(cert x509.Certificate) string {
 func main() {
 	var err error
 
-	challenge := make([]byte, 256)
-	if _, err := rand.Read(challenge); err != nil {
-		fmt.Println("error making a challenge: ", err)
-		return
+	var ctx = context.TODO()
+
+	cards, err := piv.Cards()
+	if err != nil {
+		log.Fatalf("Error listing cards: %v", err)
 	}
 
-	var attested *yubikey.AttestedSignature
-	if attested, err = yubikey.AttestAndSign(challenge); err != nil {
-		log.Fatalf("failed to attest and sign: %v", err)
+	// Find a YubiKey and open the reader.
+	var yk *piv.YubiKey
+	for _, card := range cards {
+		log.Println("found card: ", card)
+		lower := strings.ToLower(card)
+		if strings.Contains(lower, "yubico") && strings.Contains(lower, "ccid") {
+			log.Println("Card appears to be from Yubico with CCID support.")
+			if yk, err = piv.Open(card); err != nil {
+				log.Printf("Error opening card: %v", err)
+			} else {
+				break
+			}
+		}
 	}
 
-	var pubkey string
-	if pubkey, err = pemPubKey(attested.SigningCertificate.PublicKey); err != nil {
-		log.Fatalf("failed to marshal the public key: %v", err)
+	if yk == nil {
+		log.Fatalf("No suitable Yubikey identified.")
 	}
 
-	log.Println("Base64, PEM-encoded pubkey: ", base64.StdEncoding.EncodeToString([]byte(pubkey)))
-
-	message := Message{
-		Signature:              base64.StdEncoding.EncodeToString(attested.Signature),
-		Challenge:              base64.StdEncoding.EncodeToString(challenge),
-		AttestationCertificate: pemCert(*attested.AttestationCertificate),
-		SigningCertificate:     pemCert(*attested.SigningCertificate),
+	cfg := api.DefaultConfig()
+	cfg.ReadEnvironment()
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Failed to make a vault client: ", err)
 	}
 
-	jsn, err := json.Marshal(message)
-	os.Stdout.Write(jsn)
+	authmethod, err := NewYubikeyAuth(*yk)
+	authres, err := client.Auth().Login(ctx, authmethod)
+	if err != nil {
+		log.Fatalf("Failed to log in: ", err)
+	}
+	log.Fatalf("auth res: ", authres)
 }
