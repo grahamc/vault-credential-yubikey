@@ -5,19 +5,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-type YubikeyEntry struct {
-	tokenutil.TokenParams
-
-	PublicKey string
-}
 
 func (b *backend) pathYubikeys() *framework.Path {
 	p := &framework.Path{
@@ -56,36 +49,6 @@ func (b *backend) handleExistenceCheck(ctx context.Context, req *logical.Request
 	}
 
 	return yubikeyEntry != nil, nil
-}
-
-func (b *backend) yubikey(ctx context.Context, s logical.Storage, serial string) (*YubikeyEntry, error) {
-	if serial == "" {
-		return nil, fmt.Errorf("missing serial")
-	}
-
-	entry, err := s.Get(ctx, "yubikey/"+serial)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	var result YubikeyEntry
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-func (b *backend) setYubikey(ctx context.Context, s logical.Storage, serial string, yubikeyEntry *YubikeyEntry) error {
-	entry, err := logical.StorageEntryJSON("yubikey/"+serial, yubikeyEntry)
-	if err != nil {
-		return err
-	}
-
-	return s.Put(ctx, entry)
 }
 
 func (b *backend) handleYubikeyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
