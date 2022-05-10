@@ -120,19 +120,9 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("Failed to fixate public key at write"), nil
 		}
 	} else {
-		publicKeyBlock, _ := pem.Decode([]byte(yubikey.PublicKey))
-		if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
-			return logical.ErrorResponse("Internal error with public keys."), nil
-		}
-
-		publicKeyAny, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+		publicKeyEcdsa, err := protocol.MarshalEcdsaPubkeyFromPEM(yubikey.PublicKey)
 		if err != nil {
-			return logical.ErrorResponse("Internal error parsing public keys via PKIX"), nil
-		}
-
-		publicKeyEcdsa, ok := publicKeyAny.(*ecdsa.PublicKey)
-		if !ok {
-			return logical.ErrorResponse("Internal error parsing public keys as ecdsa"), nil
+			return logical.ErrorResponse("Internal error loading public key: %v", err), nil
 		}
 
 		providedPublicKey, ok := attestedSig.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
