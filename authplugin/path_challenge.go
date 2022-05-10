@@ -61,12 +61,12 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 	var err error
 	var attestedSig protocol.AttestedSignature
 
-	attestedSig.AttestationCertificate, err = protocol.Marshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
+	attestedSig.AttestationCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
 	if err != nil {
 		return logical.ErrorResponse("Error in attestation_certificate :): ", err), nil
 	}
 
-	attestedSig.SigningCertificate, err = protocol.Marshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
+	attestedSig.SigningCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
 	if err != nil {
 		return logical.ErrorResponse("Error in signing_certificate: ", err), nil
 	}

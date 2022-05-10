@@ -13,9 +13,9 @@ type AttestedSignature struct {
 	SigningCertificate     *x509.Certificate
 }
 
-func Marshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {
+func Unmarshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {
 	if certPEM == "" {
-		return nil, fmt.Errorf("Cannot marshal an empty string into an x509.Certificate")
+		return nil, fmt.Errorf("Cannot unmarshal an empty string into an x509.Certificate")
 	}
 
 	var pemBlock *pem.Block
@@ -32,9 +32,9 @@ func Marshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func MarshalEcdsaPubkeyFromPEM(keyPEM string) (*ecdsa.PublicKey, error) {
+func UnmarshalEcdsaPubkeyFromPEM(keyPEM string) (*ecdsa.PublicKey, error) {
 	if keyPEM == "" {
-		return nil, fmt.Errorf("Cannot marshal an empty string into an ecdsa.PublicKey")
+		return nil, fmt.Errorf("Cannot unmarshal an empty string into an ecdsa.PublicKey")
 	}
 
 	var pemBlock *pem.Block
