@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -54,4 +55,22 @@ func UnmarshalEcdsaPubkeyFromPEM(keyPEM string) (*ecdsa.PublicKey, error) {
 	}
 
 	return pubkeyEcdsa, nil
+}
+
+func MarshalEcdsaPubkeyToPEM(key ecdsa.PublicKey) (string, error) {
+	marshalled, err := x509.MarshalPKIXPublicKey(&key)
+	if err != nil {
+		return "", fmt.Errorf("Failed to marshal the public key: %v", err)
+	}
+
+	block := pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: marshalled,
+	}
+	s := ""
+	buffer := bytes.NewBufferString(s)
+	if err = pem.Encode(buffer, &block); err != nil {
+		return "", fmt.Errorf("Failed to pem-encode the public key: %v", err)
+	}
+	return buffer.String(), nil
 }

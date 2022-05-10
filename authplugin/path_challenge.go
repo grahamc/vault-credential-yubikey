@@ -1,13 +1,10 @@
 package authplugin
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -37,24 +34,6 @@ func (b *backend) pathChallenge() *framework.Path {
 			logical.UpdateOperation: b.handleChallenge,
 		},
 	}
-}
-
-func pemFromPubKey(ecdsaKey ecdsa.PublicKey) (string, error) {
-	marshalledKey, err := x509.MarshalPKIXPublicKey(&ecdsaKey)
-	if err != nil {
-		return "", fmt.Errorf("Failed to marlhas the publick key: %v", err)
-	}
-
-	block := pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: marshalledKey,
-	}
-	s := ""
-	buffer := bytes.NewBufferString(s)
-	if err = pem.Encode(buffer, &block); err != nil {
-		return "", fmt.Errorf("failed to encode public key: %v", err)
-	}
-	return buffer.String(), nil
 }
 
 func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -108,7 +87,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 
 	if yubikey.PublicKey == "" {
 		// Fixate the public key for future requests
-		pubkey, err := pemFromPubKey(*providedPublicKey)
+		pubkey, err := protocol.MarshalEcdsaPubkeyToPEM(*providedPublicKey)
 		if err != nil {
 			b.Logger().Warn("Error pemifynig a pubkey? ", err)
 			return logical.ErrorResponse("Internal error pemifying the pubkey"), nil
@@ -120,7 +99,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("Failed to fixate public key at write"), nil
 		}
 	} else {
-		publicKeyEcdsa, err := protocol.MarshalEcdsaPubkeyFromPEM(yubikey.PublicKey)
+		publicKeyEcdsa, err := protocol.UnmarshalEcdsaPubkeyFromPEM(yubikey.PublicKey)
 		if err != nil {
 			return logical.ErrorResponse("Internal error loading public key: %v", err), nil
 		}
