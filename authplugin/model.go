@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -12,6 +13,11 @@ type YubikeyEntry struct {
 	tokenutil.TokenParams
 
 	PublicKey string
+}
+
+func (yk *YubikeyEntry) registerPublicKey(attestation protocol.Attestation) error {
+
+	return nil
 }
 
 func (b *backend) yubikey(ctx context.Context, s logical.Storage, serial string) (*YubikeyEntry, error) {

@@ -38,20 +38,20 @@ func (b *backend) pathChallenge() *framework.Path {
 
 func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var attestedSig protocol.AttestedSignature
+	var attestationMsg protocol.Attestation
 
-	attestedSig.AttestationCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
+	attestationMsg.AttestationStatement, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
 	if err != nil {
 		return logical.ErrorResponse("Error in attestation_certificate :): ", err), nil
 	}
 
-	attestedSig.SigningCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
+	attestationMsg.SigningCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
 	if err != nil {
 		return logical.ErrorResponse("Error in signing_certificate: ", err), nil
 	}
 
 	var attestation *piv.Attestation
-	if attestation, err = verifyAttestation(attestedSig); err != nil {
+	if attestation, err = verifyAttestation(attestationMsg); err != nil {
 		return logical.ErrorResponse("Error in attestation validation: %v", err), nil
 	}
 
@@ -80,7 +80,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
-	providedPublicKey, ok := attestedSig.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
+	providedPublicKey, ok := attestationMsg.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
 	}
@@ -104,7 +104,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("Internal error loading public key: %v", err), nil
 		}
 
-		providedPublicKey, ok := attestedSig.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
+		providedPublicKey, ok := attestationMsg.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
 		if !ok {
 			return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
 		}

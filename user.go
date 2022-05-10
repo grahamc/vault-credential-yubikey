@@ -10,7 +10,7 @@ import (
 	"github.com/grahamc/vault-credential-yubikey/protocol"
 )
 
-func AttestAndSign(yk piv.YubiKey, challenge []byte) (*protocol.AttestedSignature, error) {
+func Attest(yk piv.YubiKey) (*protocol.Attestation, error) {
 	slot := piv.SlotCardAuthentication
 	var err error
 
@@ -19,26 +19,18 @@ func AttestAndSign(yk piv.YubiKey, challenge []byte) (*protocol.AttestedSignatur
 		return nil, fmt.Errorf("Failed to fetch the attestation cert: %v", err)
 	}
 
-	// {
-	// 	if _, err = yk.PrivateKey(slot); err != nil {
-	// 		log.Println("Failed to fetch the cert from the slot we're attesting: %v.", err)
-	// 		log.Println("Generating an EC256 key in the slot, with TouchPolicyNever / PINPolicyNever, and the default management key.")
-	// 		keyParams := piv.Key{
-	// 			Algorithm:   piv.AlgorithmEC256,
-	// 			TouchPolicy: piv.TouchPolicyNever,
-	// 			PINPolicy:   piv.PINPolicyNever,
-	// 		}
-	// 		yk.GenerateKey(piv.DefaultManagementKey, slot, keyParams)
-	// 	}
-	// }
-
 	var attestedSlotCert *x509.Certificate
 	if attestedSlotCert, err = yk.Attest(slot); err != nil {
 		return nil, fmt.Errorf("Failed to generate an attestation: %v", err)
 	}
 
+	return &protocol.Attestation{slot, attestationCert, attestedSlotCert}, nil
+}
+
+func Sign(yk piv.YubiKey, attestation protocol.Attestation, challenge []byte) (*protocol.ChallengeResponse, error) {
+	var err error
 	var pkey crypto.PrivateKey
-	if pkey, err = yk.PrivateKey(slot, attestedSlotCert.PublicKey, piv.KeyAuth{}); err != nil {
+	if pkey, err = yk.PrivateKey(attestation.Slot, attestation.SigningCertificate.PublicKey, piv.KeyAuth{}); err != nil {
 		return nil, fmt.Errorf("Failed to get the private key handle: %v", err)
 	}
 
@@ -48,10 +40,14 @@ func AttestAndSign(yk piv.YubiKey, challenge []byte) (*protocol.AttestedSignatur
 		return nil, fmt.Errorf("expected private key to implement crypto.Signer")
 	}
 
-	var out []byte
-	if out, err = signer.Sign(rand.Reader, challenge, crypto.SHA256); err != nil {
+	var response []byte
+	if response, err = signer.Sign(rand.Reader, challenge, crypto.SHA256); err != nil {
 		return nil, fmt.Errorf("Failed to sign the challenge: %v", err)
 	}
 
-	return &protocol.AttestedSignature{out, attestationCert, attestedSlotCert}, nil
+	return &protocol.ChallengeResponse{
+		Challenge: challenge,
+		Response:  response,
+	}, nil
+
 }

@@ -7,10 +7,10 @@ import (
 	"github.com/grahamc/vault-credential-yubikey/protocol"
 )
 
-func verifyAttestation(attested protocol.AttestedSignature) (*piv.Attestation, error) {
+func verifyAttestation(message protocol.Attestation) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
-	if attestation, err = piv.Verify(attested.AttestationCertificate, attested.SigningCertificate); err != nil {
+	if attestation, err = piv.Verify(message.AttestationStatement, message.SigningCertificate); err != nil {
 		return nil, fmt.Errorf("Failed to verify the slot attestation: %v", err)
 	}
 

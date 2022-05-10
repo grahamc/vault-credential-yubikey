@@ -6,12 +6,19 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+
+	"github.com/go-piv/piv-go/piv"
 )
 
-type AttestedSignature struct {
-	Signature              []byte
-	AttestationCertificate *x509.Certificate
-	SigningCertificate     *x509.Certificate
+type Attestation struct {
+	Slot               piv.Slot
+	Intermediate       *x509.Certificate
+	SigningCertificate *x509.Certificate
+}
+
+type ChallengeResponse struct {
+	Challenge []byte
+	Response  []byte
 }
 
 func Unmarshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {

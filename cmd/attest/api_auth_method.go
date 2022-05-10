@@ -55,16 +55,16 @@ func (a *YubikeyAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 }
 
 func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) (*api.Secret, error) {
-	var attested *protocol.AttestedSignature
+	var attested *protocol.Attestation
 	var err error
-	if attested, err = yubikey.AttestAndSign(a.yk, []byte{}); err != nil {
-		return nil, fmt.Errorf("failed to attest and sign: %v", err)
+	if attested, err = yubikey.Attest(a.yk); err != nil {
+		return nil, fmt.Errorf("failed to attest: %v", err)
 	}
 
 	log.Printf("wtf: %v", attested)
 
 	challengeData := make(map[string]interface{}, 2)
-	challengeData["attestation_certificate"] = pemCert(*attested.AttestationCertificate)
+	challengeData["attestation_statement"] = pemCert(*attested.AttestationStatement)
 	challengeData["signing_certificate"] = pemCert(*attested.SigningCertificate)
 
 	log.Printf("wth: %v", challengeData)
@@ -79,9 +79,9 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 }
 
 func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, challenge []byte) (*api.Secret, error) {
-	var attested *protocol.AttestedSignature
+	var attested *protocol.Attestation
 	var err error
-	if attested, err = yubikey.AttestAndSign(a.yk, challenge); err != nil {
+	if attested, err = yubikey.Attest(a.yk); err != nil {
 		return nil, fmt.Errorf("failed to attest and sign: %v", err)
 	}
 	var attestation *piv.Attestation
@@ -89,9 +89,14 @@ func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, c
 		return nil, fmt.Errorf("Error in attestation validation: %v", err)
 	}
 
+	var challengeResponse *protocol.ChallengeResponse
+	if challengeResponse, err = yubikey.Sign(a.yk, *attested, challenge); err != nil {
+		return nil, fmt.Errorf("Error signing the challenge: %v", err)
+	}
+
 	challengeData := make(map[string]interface{}, 2)
 	challengeData["challenge"] = base64.StdEncoding.EncodeToString(challenge)
-	challengeData["signature"] = base64.StdEncoding.EncodeToString(attested.Signature)
+	challengeData["signature"] = base64.StdEncoding.EncodeToString(challengeResponse.Response)
 	challengeData["serial"] = attestation.Serial
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
@@ -103,10 +108,10 @@ func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, c
 	return resp, nil
 }
 
-func verifyAttestation(attested protocol.AttestedSignature) (*piv.Attestation, error) {
+func verifyAttestation(attested protocol.Attestation) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
-	if attestation, err = piv.Verify(attested.AttestationCertificate, attested.SigningCertificate); err != nil {
+	if attestation, err = piv.Verify(attested.AttestationStatement, attested.SigningCertificate); err != nil {
 		return nil, fmt.Errorf("Failed to verify the slot attestation: %v", err)
 	}
 
