@@ -60,15 +60,14 @@ func pemFromPubKey(ecdsaKey ecdsa.PublicKey) (string, error) {
 func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 	var attestedSig protocol.AttestedSignature
-	x, ok := data.Get("attestation_certificate").(string)
-	b.Logger().Warn("attest cert: %v", x)
 
-	attestedSig.AttestationCertificate, err = parseCertParam(x)
+	attestedSig.AttestationCertificate, err = protocol.Marshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
 	if err != nil {
 		return logical.ErrorResponse("Error in attestation_certificate :): ", err), nil
 	}
 
-	if attestedSig.SigningCertificate, err = parseCertParam(data.Get("signing_certificate").(string)); err != nil {
+	attestedSig.SigningCertificate, err = protocol.Marshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
+	if err != nil {
 		return logical.ErrorResponse("Error in signing_certificate: ", err), nil
 	}
 

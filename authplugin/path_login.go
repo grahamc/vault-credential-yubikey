@@ -39,20 +39,6 @@ func (b *backend) pathLogin() *framework.Path {
 	}
 }
 
-func parseCertParam(pem_data string) (*x509.Certificate, error) {
-	certBytes, _ := pem.Decode([]byte(pem_data))
-	if certBytes == nil {
-		return nil, fmt.Errorf("failed to decode PEM data %v", pem_data)
-	}
-
-	cert, err := x509.ParseCertificate(certBytes.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse certificate: %v", err)
-	}
-
-	return cert, nil
-}
-
 func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 	var signature []byte
