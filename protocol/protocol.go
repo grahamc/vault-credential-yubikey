@@ -20,7 +20,7 @@ func Marshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {
 
 	var pemBlock *pem.Block
 	pemBlock, _ = pem.Decode([]byte(certPEM))
-	if pemBlock == nil {
+	if pemBlock == nil || pemBlock.Type != "CERTIFICATE" {
 		return nil, fmt.Errorf("Failed to decode the certificate's PEM into a Block")
 	}
 
