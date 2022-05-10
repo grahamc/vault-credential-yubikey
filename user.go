@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"fmt"
+
 	"github.com/go-piv/piv-go/piv"
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 )
 
-func AttestAndSign(yk piv.YubiKey, challenge []byte) (*AttestedSignature, error) {
+func AttestAndSign(yk piv.YubiKey, challenge []byte) (*protocol.AttestedSignature, error) {
 	slot := piv.SlotCardAuthentication
 	var err error
 
@@ -51,5 +53,5 @@ func AttestAndSign(yk piv.YubiKey, challenge []byte) (*AttestedSignature, error)
 		return nil, fmt.Errorf("Failed to sign the challenge: %v", err)
 	}
 
-	return &AttestedSignature{out, attestationCert, attestedSlotCert}, nil
+	return &protocol.AttestedSignature{out, attestationCert, attestedSlotCert}, nil
 }

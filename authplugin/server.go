@@ -1,11 +1,13 @@
-package yubikey
+package authplugin
 
 import (
 	"fmt"
+
 	"github.com/go-piv/piv-go/piv"
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 )
 
-func verifyAttestation(attested AttestedSignature) (*piv.Attestation, error) {
+func verifyAttestation(attested protocol.AttestedSignature) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
 	if attestation, err = piv.Verify(attested.AttestationCertificate, attested.SigningCertificate); err != nil {

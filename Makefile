@@ -14,7 +14,7 @@ endif
 
 all: fmt build start
 
-build:
+build: fmt
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o vault/plugins/vault-plugin-auth-yubikey cmd/vault-plugin-auth-yubikey/main.go
 	GOOS=$(OS) GOARCH="$(GOARCH)" go build -o attest cmd/attest/*.go
 

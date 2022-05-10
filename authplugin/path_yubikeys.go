@@ -1,4 +1,4 @@
-package yubikey
+package authplugin
 
 import (
 	"context"

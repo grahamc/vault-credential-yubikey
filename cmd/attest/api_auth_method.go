@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-piv/piv-go/piv"
 	yubikey "github.com/grahamc/vault-credential-yubikey"
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -54,7 +55,7 @@ func (a *YubikeyAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 }
 
 func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) (*api.Secret, error) {
-	var attested *yubikey.AttestedSignature
+	var attested *protocol.AttestedSignature
 	var err error
 	if attested, err = yubikey.AttestAndSign(a.yk, []byte{}); err != nil {
 		return nil, fmt.Errorf("failed to attest and sign: %v", err)
@@ -78,7 +79,7 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 }
 
 func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, challenge []byte) (*api.Secret, error) {
-	var attested *yubikey.AttestedSignature
+	var attested *protocol.AttestedSignature
 	var err error
 	if attested, err = yubikey.AttestAndSign(a.yk, challenge); err != nil {
 		return nil, fmt.Errorf("failed to attest and sign: %v", err)
@@ -102,7 +103,7 @@ func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, c
 	return resp, nil
 }
 
-func verifyAttestation(attested yubikey.AttestedSignature) (*piv.Attestation, error) {
+func verifyAttestation(attested protocol.AttestedSignature) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
 	if attestation, err = piv.Verify(attested.AttestationCertificate, attested.SigningCertificate); err != nil {

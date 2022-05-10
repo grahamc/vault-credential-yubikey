@@ -1,4 +1,4 @@
-package yubikey
+package protocol
 
 import (
 	"crypto/x509"

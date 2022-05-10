@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	yubikey "github.com/grahamc/vault-credential-yubikey"
+	authplugin "github.com/grahamc/vault-credential-yubikey/authplugin"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -18,7 +18,7 @@ func main() {
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	err := plugin.Serve(&plugin.ServeOpts{
-		BackendFactoryFunc: yubikey.Factory,
+		BackendFactoryFunc: authplugin.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {

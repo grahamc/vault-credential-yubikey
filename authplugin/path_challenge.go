@@ -1,4 +1,4 @@
-package yubikey
+package authplugin
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-piv/piv-go/piv"
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -58,7 +59,7 @@ func pemFromPubKey(ecdsaKey ecdsa.PublicKey) (string, error) {
 
 func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var attestedSig AttestedSignature
+	var attestedSig protocol.AttestedSignature
 	x, ok := data.Get("attestation_certificate").(string)
 	b.Logger().Warn("attest cert: %v", x)
 
