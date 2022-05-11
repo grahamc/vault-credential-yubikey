@@ -39,7 +39,7 @@ func (yk *YubikeyEntry) setPublicKey(attestation protocol.Attestation) (bool, er
 }
 
 func (yk *YubikeyEntry) getPublicKey() (*ecdsa.PublicKey, error) {
-	if yk.PublicKey != "" {
+	if yk.PublicKey == "" {
 		return nil, fmt.Errorf("No stored public key")
 	}
 
