@@ -75,7 +75,7 @@ func (b *backend) handleYubikeyRead(ctx context.Context, req *logical.Request, d
 }
 
 func (b *backend) handleYubikeyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	serial := strings.ToLower(d.Get("serial").(string))
+	serial := d.Get("serial").(string)
 	if serial == "" {
 		return logical.ErrorResponse("serial must be provided"), nil
 	}
