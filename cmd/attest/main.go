@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-piv/piv-go/piv"
+	"github.com/grahamc/vault-credential-yubikey/authmethod"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -45,7 +46,7 @@ func main() {
 		log.Fatalf("Failed to make a vault client: ", err)
 	}
 
-	authmethod, err := NewYubikeyAuth(*yk)
+	authmethod, err := authmethod.NewYubikeyAuth(*yk)
 	authres, err := client.Auth().Login(ctx, authmethod)
 	if err != nil {
 		log.Fatalf("Failed to log in: ", err)
