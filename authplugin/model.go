@@ -107,12 +107,36 @@ func (ce *ChallengeEntry) ID() string {
 	return ""
 }
 
-func (b *backend) challengeExists(ctx context.Context, s logical.Storage, ce ChallengeEntry) (bool, error) {
+func (ce *ChallengeEntry) Path() (string, error) {
 	if ce.YubikeySerial == "" {
-		return false, fmt.Errorf("missing serial")
+		return "", fmt.Errorf("missing serial")
 	}
 
-	entry, err := s.Get(ctx, "challenge/"+ce.YubikeySerial+"/"+ce.ID())
+	return "challenge/" + ce.YubikeySerial + "/" + ce.ID(), nil
+
+}
+
+func (b *backend) recordChallenge(ctx context.Context, s logical.Storage, ce ChallengeEntry) error {
+	path, err := ce.Path()
+	if err != nil {
+		return err
+	}
+
+	entry, err := logical.StorageEntryJSON(path, ce)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(ctx, entry)
+}
+
+func (b *backend) challengeExists(ctx context.Context, s logical.Storage, ce ChallengeEntry) (bool, error) {
+	path, err := ce.Path()
+	if err != nil {
+		return false, err
+	}
+
+	entry, err := s.Get(ctx, path)
 	if err != nil {
 		return false, err
 	}
@@ -124,11 +148,12 @@ func (b *backend) challengeExists(ctx context.Context, s logical.Storage, ce Cha
 }
 
 func (b *backend) deleteChallenge(ctx context.Context, s logical.Storage, ce ChallengeEntry) error {
-	if ce.YubikeySerial == "" {
-		return fmt.Errorf("missing serial")
+	path, err := ce.Path()
+	if err != nil {
+		return err
 	}
 
-	err := s.Delete(ctx, "challenge/"+ce.YubikeySerial+"/"+ce.ID())
+	err = s.Delete(ctx, path)
 	if err != nil {
 		return err
 	}
