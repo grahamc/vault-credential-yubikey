@@ -3,10 +3,8 @@ package authplugin
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"math/big"
 
@@ -77,23 +75,12 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 	}
 
 	if yubikey.PublicKey == "" {
-		b.Logger().Warn("token trying to authenticate but no public key is pinned")
-		return nil, logical.ErrPermissionDenied
 	}
 
-	publicKeyBlock, _ := pem.Decode([]byte(yubikey.PublicKey))
-	if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
-		return logical.ErrorResponse("Internal error with public keys."), nil
-	}
-
-	publicKeyAny, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+	publicKeyEcdsa, err := yubikey.getPublicKey()
 	if err != nil {
-		return logical.ErrorResponse("Internal error parsing public keys via PKIX"), nil
-	}
-
-	publicKeyEcdsa, ok := publicKeyAny.(*ecdsa.PublicKey)
-	if !ok {
-		return logical.ErrorResponse("Internal error parsing public keys as ecdsa"), nil
+		b.Logger().Warn("Failed to get the public key from the yubikey: %v", err)
+		return nil, logical.ErrPermissionDenied
 	}
 
 	var sig struct {
