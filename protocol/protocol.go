@@ -40,6 +40,17 @@ func Unmarshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) 
 	return cert, nil
 }
 
+func Marshalx509CertificateToPEM(cert x509.Certificate) string {
+	block := pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	}
+	s := ""
+	buffer := bytes.NewBufferString(s)
+	pem.Encode(buffer, &block)
+	return buffer.String()
+}
+
 func UnmarshalEcdsaPubkeyFromPEM(keyPEM string) (*ecdsa.PublicKey, error) {
 	if keyPEM == "" {
 		return nil, fmt.Errorf("Cannot unmarshal an empty string into an ecdsa.PublicKey")

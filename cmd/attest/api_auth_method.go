@@ -64,8 +64,8 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 	log.Printf("wtf: %v", attested)
 
 	challengeData := make(map[string]interface{}, 2)
-	challengeData["intermediate"] = pemCert(*attested.Intermediate)
-	challengeData["statement"] = pemCert(*attested.Statement)
+	challengeData["intermediate"] = protocol.Marshalx509CertificateToPEM(*attested.Intermediate)
+	challengeData["statement"] = protocol.Marshalx509CertificateToPEM(*attested.Statement)
 
 	log.Printf("wth: %v", challengeData)
 

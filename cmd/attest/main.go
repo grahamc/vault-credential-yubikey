@@ -1,52 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
 	"log"
 	"strings"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/hashicorp/vault/api"
 )
-
-func pemPubKey(pubkeyAny interface{}) (string, error) {
-	ecdsaKey, ok := pubkeyAny.(*ecdsa.PublicKey)
-	if !ok {
-		return "", fmt.Errorf("Failed to convert the pemPubKey parameter to an ECDSA PublicKey.")
-	}
-
-	marshalledKey, err := x509.MarshalPKIXPublicKey(ecdsaKey)
-	if err != nil {
-		return "", fmt.Errorf("Failed to marlhas the publick key: %v", err)
-	}
-
-	block := pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: marshalledKey,
-	}
-	s := ""
-	buffer := bytes.NewBufferString(s)
-	if err = pem.Encode(buffer, &block); err != nil {
-		return "", fmt.Errorf("failed to encode public key: %v", err)
-	}
-	return buffer.String(), nil
-}
-
-func pemCert(cert x509.Certificate) string {
-	block := pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Raw,
-	}
-	s := ""
-	buffer := bytes.NewBufferString(s)
-	pem.Encode(buffer, &block)
-	return buffer.String()
-}
 
 func main() {
 	var err error
