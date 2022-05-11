@@ -20,9 +20,9 @@ func (b *backend) pathChallenge() *framework.Path {
 		Pattern: "challenge$",
 
 		Fields: map[string]*framework.FieldSchema{
-			"attestation_certificate": {
+			"intermediate": {
 				Type:        framework.TypeString,
-				Description: "The PEM-encoded Attestatation certificate (The certificate contained in slot f9.)",
+				Description: "The PEM-encoded Intermediate Certificate (The certificate contained in slot f9.)",
 			},
 			"signing_certificate": {
 				Type:        framework.TypeString,
@@ -40,9 +40,9 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 	var err error
 	var attestationMsg protocol.Attestation
 
-	attestationMsg.AttestationStatement, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("attestation_certificate").(string))
+	attestationMsg.Intermediate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("intermediate").(string))
 	if err != nil {
-		return logical.ErrorResponse("Error in attestation_certificate :): ", err), nil
+		return logical.ErrorResponse("Error in intermediate: ", err), nil
 	}
 
 	attestationMsg.SigningCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("signing_certificate").(string))

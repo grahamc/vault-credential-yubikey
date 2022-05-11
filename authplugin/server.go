@@ -10,7 +10,7 @@ import (
 func verifyAttestation(message protocol.Attestation) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
-	if attestation, err = piv.Verify(message.AttestationStatement, message.SigningCertificate); err != nil {
+	if attestation, err = piv.Verify(message.Intermediate, message.SigningCertificate); err != nil {
 		return nil, fmt.Errorf("Failed to verify the slot attestation: %v", err)
 	}
 
