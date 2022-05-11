@@ -50,5 +50,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to log in: ", err)
 	}
-	log.Fatalf("auth res: ", authres)
+	log.Println("auth res: ", authres)
 }

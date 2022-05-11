@@ -3,6 +3,7 @@ package authplugin
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -117,8 +118,12 @@ func (ce *ChallengeEntry) Bytes() ([]byte, error) {
 	return base64.StdEncoding.DecodeString(ce.Challenge)
 }
 
-func (ce *ChallengeEntry) ID() string {
-	return ""
+func (ce *ChallengeEntry) ID() (string, error) {
+	bytes, err := ce.Bytes()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", md5.Sum(bytes)), nil
 }
 
 func (ce *ChallengeEntry) Path() (string, error) {
@@ -126,7 +131,12 @@ func (ce *ChallengeEntry) Path() (string, error) {
 		return "", fmt.Errorf("missing serial")
 	}
 
-	return "challenge/" + ce.YubikeySerial + "/" + ce.ID(), nil
+	id, err := ce.ID()
+	if err != nil {
+		return "", err
+	}
+
+	return "challenge/" + ce.YubikeySerial + "/" + id, nil
 
 }
 

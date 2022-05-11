@@ -60,8 +60,12 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 	if attested, err = yubikey.Attest(a.yk); err != nil {
 		return nil, fmt.Errorf("failed to attest: %v", err)
 	}
+	var attestation *piv.Attestation
+	if attestation, err = verifyAttestation(*attested); err != nil {
+		return nil, fmt.Errorf("Error in attestation validation: %v", err)
+	}
 
-	log.Printf("wtf: %v", attested)
+	log.Printf("wtf: %v", attestation.Serial)
 
 	challengeData := make(map[string]interface{}, 2)
 	challengeData["intermediate"] = protocol.Marshalx509CertificateToPEM(*attested.Intermediate)
