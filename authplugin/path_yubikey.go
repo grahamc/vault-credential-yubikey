@@ -2,11 +2,10 @@ package authplugin
 
 import (
 	"context"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"strings"
 
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -96,16 +95,16 @@ func (b *backend) handleYubikeyWrite(ctx context.Context, req *logical.Request, 
 			return logical.ErrorResponse("public_key does not base64decode: %v", err), nil
 		}
 
-		publicKeyBlock, _ := pem.Decode(pemKey)
-		if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
-			return logical.ErrorResponse("public_key: failed to decode PEM data"), nil
+		unmarshalled, err := protocol.UnmarshalEcdsaPubkeyFromPEM(string(pemKey))
+		if err != nil {
 		}
 
-		if _, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes); err != nil {
-			return logical.ErrorResponse("public_key: failed to parse PKIX Public Key"), nil
+		marshalled, err := protocol.MarshalEcdsaPubkeyToPEM(*unmarshalled)
+		if err != nil {
+			return logical.ErrorResponse("public key: failed to marshal to PEM: %v", err), nil
 		}
 
-		yubikeyEntry.PublicKey = string(pemKey)
+		yubikeyEntry.PublicKey = marshalled
 	}
 
 	if err := yubikeyEntry.ParseTokenFields(req, d); err != nil {
