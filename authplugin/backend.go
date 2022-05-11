@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/grahamc/vault-credential-yubikey/conditions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -12,7 +13,7 @@ import (
 // backend wraps the backend framework and adds a map for storing key value pairs.
 type backend struct {
 	*framework.Backend
-	conditions MinimumConditions
+	conditions conditions.MinimumConditions
 }
 
 var _ logical.Factory = Factory

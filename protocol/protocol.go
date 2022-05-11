@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-piv/piv-go/piv"
+	"github.com/grahamc/vault-credential-yubikey/conditions"
 )
 
 type Attestation struct {
@@ -23,6 +24,33 @@ func (attestation *Attestation) PublicKey() (*ecdsa.PublicKey, error) {
 	}
 
 	return publicKey, nil
+}
+
+func (attestation *Attestation) VerifyWithoutConditions() (*piv.Attestation, error) {
+	var err error
+	var pivAttestation *piv.Attestation
+	if pivAttestation, err = piv.Verify(attestation.Intermediate, attestation.Statement); err != nil {
+		return nil, fmt.Errorf("Failed to verify the attestation: %v", err)
+	}
+
+	return pivAttestation, nil
+}
+
+func (attestation *Attestation) VerifyWithConditions(conditions conditions.MinimumConditions) (*piv.Attestation, error) {
+	var err error
+	var pivAttestation *piv.Attestation
+
+	pivAttestation, err = attestation.VerifyWithoutConditions()
+	if err != nil {
+		return nil, err
+	}
+
+	err = conditions.Verify(*pivAttestation)
+	if err != nil {
+		return nil, fmt.Errorf("Error in minimum device conditions: %v", err)
+	}
+
+	return pivAttestation, nil
 }
 
 type ChallengeResponse struct {

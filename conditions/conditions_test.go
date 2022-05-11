@@ -1,4 +1,4 @@
-package authplugin
+package conditions
 
 import (
 	"github.com/go-piv/piv-go/piv"

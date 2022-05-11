@@ -50,12 +50,8 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 	}
 
 	var attestation *piv.Attestation
-	if attestation, err = verifyAttestation(attestationMsg); err != nil {
+	if attestation, err = attestationMsg.VerifyWithConditions(b.conditions); err != nil {
 		return logical.ErrorResponse("Error in attestation validation: %v", err), nil
-	}
-
-	if err = b.conditions.verify(*attestation); err != nil {
-		return logical.ErrorResponse("Error in minimum device conditions: %v", err), nil
 	}
 
 	serial := strings.ToLower(fmt.Sprint(attestation.Serial))

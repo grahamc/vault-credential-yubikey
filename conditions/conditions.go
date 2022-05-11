@@ -1,4 +1,4 @@
-package authplugin
+package conditions
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ type MinimumConditions struct {
 	Formfactors []piv.Formfactor
 }
 
-func (cond *MinimumConditions) verify(attestation piv.Attestation) error {
+func (cond *MinimumConditions) Verify(attestation piv.Attestation) error {
 	if cond.Version.Major > attestation.Version.Major {
 		return fmt.Errorf("Key's major version %v is older than the minimum, %v", attestation.Version, cond.Version)
 	}
