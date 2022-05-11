@@ -3,6 +3,7 @@ package authplugin
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 
@@ -97,6 +98,19 @@ func (b *backend) setYubikey(ctx context.Context, s logical.Storage, serial stri
 type ChallengeEntry struct {
 	Challenge     string
 	YubikeySerial string
+}
+
+func NewChallengeEntry(serial string) (*ChallengeEntry, error) {
+	challenge := make([]byte, 256)
+	if _, err := rand.Read(challenge); err != nil {
+		return nil, logical.ErrPermissionDenied
+	}
+
+	b64Challenge := base64.StdEncoding.EncodeToString(challenge)
+	return &ChallengeEntry{
+		Challenge:     b64Challenge,
+		YubikeySerial: serial,
+	}, nil
 }
 
 func (ce *ChallengeEntry) Bytes() ([]byte, error) {

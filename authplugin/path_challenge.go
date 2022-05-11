@@ -2,8 +2,6 @@ package authplugin
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/go-piv/piv-go/piv"
@@ -98,17 +96,21 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("Mismatched public key."), nil
 	}
 
-	challenge := make([]byte, 256)
-	if _, err := rand.Read(challenge); err != nil {
-		return nil, logical.ErrPermissionDenied
+	challenge, err := NewChallengeEntry(serial)
+	if err != nil {
+		b.Logger().Warn("Error creating a challenge: %v", err)
+		return logical.ErrorResponse("Internal error generating a challenge"), nil
 	}
-
-	b64Challenge := base64.StdEncoding.EncodeToString(challenge)
+	err = b.recordChallenge(ctx, req.Storage, *challenge)
+	if err != nil {
+		b.Logger().Warn("Error storing the challenge: %v", err)
+		return logical.ErrorResponse("Internal error generating a challenge"), nil
+	}
 
 	// Compose the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"challenge": b64Challenge,
+			"challenge": challenge.Challenge,
 		},
 	}
 
