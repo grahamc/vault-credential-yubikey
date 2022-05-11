@@ -11,9 +11,9 @@ import (
 )
 
 type Attestation struct {
-	Slot               piv.Slot
-	Intermediate       *x509.Certificate
-	SigningCertificate *x509.Certificate
+	Slot         piv.Slot
+	Intermediate *x509.Certificate
+	Statement    *x509.Certificate
 }
 
 type ChallengeResponse struct {

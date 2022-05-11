@@ -65,7 +65,7 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 
 	challengeData := make(map[string]interface{}, 2)
 	challengeData["intermediate"] = pemCert(*attested.Intermediate)
-	challengeData["signing_certificate"] = pemCert(*attested.SigningCertificate)
+	challengeData["statement"] = pemCert(*attested.Statement)
 
 	log.Printf("wth: %v", challengeData)
 
@@ -111,7 +111,7 @@ func (a *YubikeyAuth) submitChallenge(ctx context.Context, client *api.Client, c
 func verifyAttestation(attested protocol.Attestation) (*piv.Attestation, error) {
 	var err error
 	var attestation *piv.Attestation
-	if attestation, err = piv.Verify(attested.Intermediate, attested.SigningCertificate); err != nil {
+	if attestation, err = piv.Verify(attested.Intermediate, attested.Statement); err != nil {
 		return nil, fmt.Errorf("Failed to verify the slot attestation: %v", err)
 	}
 

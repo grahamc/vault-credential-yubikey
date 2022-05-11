@@ -30,7 +30,7 @@ func Attest(yk piv.YubiKey) (*protocol.Attestation, error) {
 func Sign(yk piv.YubiKey, attestation protocol.Attestation, challenge []byte) (*protocol.ChallengeResponse, error) {
 	var err error
 	var pkey crypto.PrivateKey
-	if pkey, err = yk.PrivateKey(attestation.Slot, attestation.SigningCertificate.PublicKey, piv.KeyAuth{}); err != nil {
+	if pkey, err = yk.PrivateKey(attestation.Slot, attestation.Statement.PublicKey, piv.KeyAuth{}); err != nil {
 		return nil, fmt.Errorf("Failed to get the private key handle: %v", err)
 	}
 

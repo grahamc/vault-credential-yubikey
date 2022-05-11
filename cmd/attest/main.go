@@ -14,11 +14,6 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-type Message struct {
-	AttestationCertificate string `json:"attestation_certificate"`
-	SigningCertificate     string `json:"signing_certificate"`
-}
-
 func pemPubKey(pubkeyAny interface{}) (string, error) {
 	ecdsaKey, ok := pubkeyAny.(*ecdsa.PublicKey)
 	if !ok {

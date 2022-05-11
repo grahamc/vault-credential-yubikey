@@ -24,7 +24,7 @@ func (b *backend) pathChallenge() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The PEM-encoded Intermediate Certificate (The certificate contained in slot f9.)",
 			},
-			"signing_certificate": {
+			"statement": {
 				Type:        framework.TypeString,
 				Description: "The PEM-encoded Signing certificate.",
 			},
@@ -45,9 +45,9 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("Error in intermediate: ", err), nil
 	}
 
-	attestationMsg.SigningCertificate, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("signing_certificate").(string))
+	attestationMsg.Statement, err = protocol.Unmarshalx509CertificateFromPEM(data.Get("statement").(string))
 	if err != nil {
-		return logical.ErrorResponse("Error in signing_certificate: ", err), nil
+		return logical.ErrorResponse("Error in statement: ", err), nil
 	}
 
 	var attestation *piv.Attestation
@@ -80,7 +80,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
-	providedPublicKey, ok := attestationMsg.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
+	providedPublicKey, ok := attestationMsg.Statement.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
 	}
@@ -104,7 +104,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("Internal error loading public key: %v", err), nil
 		}
 
-		providedPublicKey, ok := attestationMsg.SigningCertificate.PublicKey.(*ecdsa.PublicKey)
+		providedPublicKey, ok := attestationMsg.Statement.PublicKey.(*ecdsa.PublicKey)
 		if !ok {
 			return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
 		}
