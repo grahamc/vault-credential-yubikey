@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/grahamc/vault-credential-yubikey/conditions"
@@ -56,6 +58,17 @@ func (attestation *Attestation) VerifyWithConditions(conditions conditions.Minim
 type ChallengeResponse struct {
 	Challenge []byte
 	Response  []byte
+}
+
+func (cr *ChallengeResponse) Verify(publicKey *ecdsa.PublicKey) (bool, error) {
+	var sig struct {
+		R, S *big.Int
+	}
+	if _, err := asn1.Unmarshal(cr.Response, &sig); err != nil {
+		return false, fmt.Errorf("Failed to unmarshaling the response: %v", err)
+	}
+
+	return ecdsa.Verify(publicKey, cr.Challenge, sig.R, sig.S), nil
 }
 
 func Unmarshalx509CertificateFromPEM(certPEM string) (*x509.Certificate, error) {

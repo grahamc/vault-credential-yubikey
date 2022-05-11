@@ -2,12 +2,9 @@ package authplugin
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"encoding/asn1"
 	"encoding/base64"
-	"fmt"
-	"math/big"
 
+	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,19 +36,18 @@ func (b *backend) pathLogin() *framework.Path {
 
 func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var signature []byte
-	var challenge []byte
+	var cr protocol.ChallengeResponse
 
 	serial, ok := data.Get("serial").(string)
 	if !ok {
 		return logical.ErrorResponse("Failed to get getting serial string"), nil
 	}
 
-	if signature, err = base64.StdEncoding.DecodeString(data.Get("signature").(string)); err != nil {
+	if cr.Response, err = base64.StdEncoding.DecodeString(data.Get("signature").(string)); err != nil {
 		return logical.ErrorResponse("Error in signature: ", err), nil
 	}
 
-	if challenge, err = base64.StdEncoding.DecodeString(data.Get("challenge").(string)); err != nil {
+	if cr.Challenge, err = base64.StdEncoding.DecodeString(data.Get("challenge").(string)); err != nil {
 		return logical.ErrorResponse("Error in challenge: ", err), nil
 	}
 
@@ -74,23 +70,19 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 		}
 	}
 
-	if yubikey.PublicKey == "" {
-	}
-
 	publicKeyEcdsa, err := yubikey.getPublicKey()
 	if err != nil {
 		b.Logger().Warn("Failed to get the public key from the yubikey: %v", err)
 		return nil, logical.ErrPermissionDenied
 	}
 
-	var sig struct {
-		R, S *big.Int
-	}
-	if _, err := asn1.Unmarshal(signature, &sig); err != nil {
-		return nil, fmt.Errorf("unmarshaling signature: %v", err)
-	}
-	if !ecdsa.Verify(publicKeyEcdsa, challenge, sig.R, sig.S) {
-		return nil, fmt.Errorf("signature didn't match")
+	challengeResponsePassed, err := cr.Verify(publicKeyEcdsa)
+	if !challengeResponsePassed || err != nil {
+		if err != nil {
+			b.Logger().Warn("Failed to verify the challenge response: %v", err)
+		}
+
+		return nil, logical.ErrPermissionDenied
 	}
 
 	auth := &logical.Auth{
