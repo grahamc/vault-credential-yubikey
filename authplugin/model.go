@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/grahamc/vault-credential-yubikey/protocol"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
@@ -99,6 +100,7 @@ func (b *backend) setYubikey(ctx context.Context, s logical.Storage, serial stri
 type ChallengeEntry struct {
 	Challenge     string
 	YubikeySerial string
+	Timestamp     int64
 }
 
 func NewChallengeEntry(serial string) (*ChallengeEntry, error) {
@@ -111,6 +113,7 @@ func NewChallengeEntry(serial string) (*ChallengeEntry, error) {
 	return &ChallengeEntry{
 		Challenge:     b64Challenge,
 		YubikeySerial: serial,
+		Timestamp:     time.Now().Unix(),
 	}, nil
 }
 
