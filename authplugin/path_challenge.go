@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/grahamc/vault-credential-yubikey/protocol"
@@ -54,7 +53,7 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("Error in attestation validation: %v", err), nil
 	}
 
-	serial := strings.ToLower(fmt.Sprint(attestation.Serial))
+	serial := fmt.Sprint(attestation.Serial)
 
 	yubikey, err := b.yubikey(ctx, req.Storage, serial)
 	if yubikey == nil {
