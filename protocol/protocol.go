@@ -16,6 +16,15 @@ type Attestation struct {
 	Statement    *x509.Certificate
 }
 
+func (attestation *Attestation) PublicKey() (*ecdsa.PublicKey, error) {
+	publicKey, ok := attestation.Statement.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("Failed to convert the statement's public key")
+	}
+
+	return publicKey, nil
+}
+
 type ChallengeResponse struct {
 	Challenge []byte
 	Response  []byte
