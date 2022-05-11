@@ -51,9 +51,25 @@ func (b *backend) handleLogin(ctx context.Context, req *logical.Request, data *f
 		return logical.ErrorResponse("Error in challenge: ", err), nil
 	}
 
+	challengeEntry := ChallengeEntry{
+		Challenge:     data.Get("challenge").(string),
+		YubikeySerial: serial,
+	}
+	exists, err := b.challengeExists(ctx, req.Storage, challengeEntry)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return logical.ErrorResponse("invalid challenge / serial"), nil
+	}
+	err = b.deleteChallenge(ctx, req.Storage, challengeEntry)
+	if err != nil {
+		return nil, err
+	}
+
 	yubikey, err := b.yubikey(ctx, req.Storage, serial)
 	if yubikey == nil {
-		return logical.ErrorResponse("invalid serial or public key"), nil
+		return logical.ErrorResponse("invalid serial"), nil
 	}
 	if err != nil {
 		return nil, err
