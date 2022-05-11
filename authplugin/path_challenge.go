@@ -2,7 +2,6 @@ package authplugin
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -79,39 +78,29 @@ func (b *backend) handleChallenge(ctx context.Context, req *logical.Request, dat
 			return nil, logical.ErrPermissionDenied
 		}
 	}
+	if yubikey.PublicKey == "" {
+		changed, err := yubikey.setPublicKey(attestationMsg)
+		if err != nil {
+			b.Logger().Warn("Error storing the public key: %v", err)
+		}
 
-	providedPublicKey, ok := attestationMsg.Statement.PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
+		if changed {
+			err = b.setYubikey(ctx, req.Storage, serial, yubikey)
+			if err != nil {
+				b.Logger().Warn("Error writing the fixated public key: %v", err)
+				return logical.ErrorResponse("Internal error"), nil
+			}
+		}
 	}
 
-	if yubikey.PublicKey == "" {
-		// Fixate the public key for future requests
-		pubkey, err := protocol.MarshalEcdsaPubkeyToPEM(*providedPublicKey)
-		if err != nil {
-			b.Logger().Warn("Error pemifynig a pubkey? ", err)
-			return logical.ErrorResponse("Internal error pemifying the pubkey"), nil
-		}
+	keysMatch, err := yubikey.verifyKeyMatches(attestationMsg)
+	if err != nil {
+		b.Logger().Warn("Error checking the public key: %v", err)
+		return logical.ErrorResponse("Internal error checking public key"), nil
+	}
 
-		yubikey.PublicKey = pubkey
-		err = b.setYubikey(ctx, req.Storage, serial, yubikey)
-		if err != nil {
-			return logical.ErrorResponse("Failed to fixate public key at write"), nil
-		}
-	} else {
-		publicKeyEcdsa, err := protocol.UnmarshalEcdsaPubkeyFromPEM(yubikey.PublicKey)
-		if err != nil {
-			return logical.ErrorResponse("Internal error loading public key: %v", err), nil
-		}
-
-		providedPublicKey, ok := attestationMsg.Statement.PublicKey.(*ecdsa.PublicKey)
-		if !ok {
-			return logical.ErrorResponse("Internal error converting attestation certificate's public key"), nil
-		}
-
-		if !publicKeyEcdsa.Equal(providedPublicKey) {
-			return logical.ErrorResponse("Mismatched public key."), nil
-		}
+	if !keysMatch {
+		return logical.ErrorResponse("Mismatched public key."), nil
 	}
 
 	challenge := make([]byte, 256)
