@@ -3,6 +3,7 @@ package authplugin
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/grahamc/vault-credential-yubikey/protocol"
@@ -91,4 +92,46 @@ func (b *backend) setYubikey(ctx context.Context, s logical.Storage, serial stri
 	}
 
 	return s.Put(ctx, entry)
+}
+
+type ChallengeEntry struct {
+	Challenge     string
+	YubikeySerial string
+}
+
+func (ce *ChallengeEntry) Bytes() ([]byte, error) {
+	return base64.StdEncoding.DecodeString(ce.Challenge)
+}
+
+func (ce *ChallengeEntry) ID() string {
+	return ""
+}
+
+func (b *backend) challengeExists(ctx context.Context, s logical.Storage, ce ChallengeEntry) (bool, error) {
+	if ce.YubikeySerial == "" {
+		return false, fmt.Errorf("missing serial")
+	}
+
+	entry, err := s.Get(ctx, "challenge/"+ce.YubikeySerial+"/"+ce.ID())
+	if err != nil {
+		return false, err
+	}
+	if entry == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (b *backend) deleteChallenge(ctx context.Context, s logical.Storage, ce ChallengeEntry) error {
+	if ce.YubikeySerial == "" {
+		return fmt.Errorf("missing serial")
+	}
+
+	err := s.Delete(ctx, "challenge/"+ce.YubikeySerial+"/"+ce.ID())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
