@@ -65,13 +65,11 @@ func (a *YubikeyAuth) requestChallenge(ctx context.Context, client *api.Client) 
 		return nil, fmt.Errorf("Error in attestation validation: %v", err)
 	}
 
-	log.Printf("wtf: %v", attestation.Serial)
+	log.Printf("Serial: %v", attestation.Serial)
 
 	challengeData := make(map[string]interface{}, 2)
 	challengeData["intermediate"] = protocol.Marshalx509CertificateToPEM(*attested.Intermediate)
 	challengeData["statement"] = protocol.Marshalx509CertificateToPEM(*attested.Statement)
-
-	log.Printf("wth: %v", challengeData)
 
 	path := fmt.Sprintf("auth/%s/challenge", a.mountPath)
 	resp, err := client.Logical().Write(path, challengeData)
